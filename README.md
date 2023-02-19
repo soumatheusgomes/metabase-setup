@@ -1,1 +1,1 @@
-# metabase-setup
+# Metabase Setup :)

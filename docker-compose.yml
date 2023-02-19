@@ -1,0 +1,59 @@
+version: "3.9"
+
+volumes:
+  metabase_storage:
+  traefik_storage:
+
+services:
+  metabase:
+    image: metabase/metabase:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.metabase.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
+      - traefik.http.routers.metabase.tls=true
+      - traefik.http.routers.metabase.entrypoints=web,websecure
+      - traefik.http.routers.metabase.tls.certresolver=mytlschallenge
+      - traefik.http.middlewares.metabase.headers.SSLRedirect=true
+      - traefik.http.middlewares.metabase.headers.STSSeconds=315360000
+      - traefik.http.middlewares.metabase.headers.browserXSSFilter=true
+      - traefik.http.middlewares.metabase.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.metabase.headers.forceSTSHeader=true
+      - traefik.http.middlewares.metabase.headers.SSLHost=grupootg.com
+      - traefik.http.middlewares.metabase.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.metabase.headers.STSPreload=true
+      - traefik.http.routers.metabase.middlewares=metabase@docker
+    volumes:
+    - metabase_storage:/metabase
+    ports:
+      - 3000:3000
+    environment:
+      JAVA_TIMEZONE: ${GENERIC_TIMEZONE}
+
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: ${POSTGRES_HOST}
+      MB_DB_PORT: ${POSTGRES_PORT}
+      MB_DB_DBNAME: ${POSTGRES_DB}
+      MB_DB_USER: ${POSTGRES_USER}
+      MB_DB_PASS: ${POSTGRES_PASSWORD}
+
+  traefik:
+    image: traefik:latest
+    restart: always
+    command:
+      - "--api=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+      - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}"
+      - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - traefik_storage:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
