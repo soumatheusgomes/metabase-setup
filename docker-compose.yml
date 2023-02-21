@@ -6,7 +6,7 @@ volumes:
 
 services:
   metabase:
-    image: metabase/metabase:latest
+    build: .
     labels:
       - traefik.enable=true
       - traefik.http.routers.metabase.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
